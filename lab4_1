@@ -1,0 +1,125 @@
+/*        Your Name & E-mail: Kelley Zhou (kzhou034@ucr.edu)
+
+*          Discussion Section: 23
+
+ *         Assignment: Lab 4  Exercise 1
+
+ *         Exercise Description: lights up leds one by one in a loop goes one direction then goes back 
+
+ *         I acknowledge all content contained herein, excluding template or example code, is my own original work.
+
+ *
+
+ *         Demo Link: https://youtu.be/oSKe1bp8u_0
+
+ */
+
+// The following global variables are used to implement SynchSM
+// functionality using the Arduino API. In contrast the zyBook,
+// the Arduino API does not provide the programmer with direct
+// access to Timer Interrupt functions. 
+const unsigned long period = 1000; 
+unsigned long lastRan;
+
+const int b_size = 7;
+const int b[b_size] = {2, 3, 4, 5, 9, 10, 11};
+unsigned int a;
+
+void setup(){
+
+  // Default Arduino Function
+
+    // Initialize LEDs
+    for(int i = 0; i < b_size; i++)
+    {
+        pinMode(b[i], OUTPUT);
+    }
+    Serial.begin(9600);
+    lastRan = 0;
+}
+
+enum States{INIT, S0, S1, S2, S3} state = INIT;
+
+// The Tick() function is similar in principle to zyBooks
+// If you find it confusing, draw the corresponding SynchSM
+// diagram. 
+void Tick(){
+
+    // State Transitions
+    switch(state){
+      case INIT:    
+            state = S0;
+        break;
+      case S0:
+          a=0;
+            state = S1;
+        break;
+      case S1:
+            if (a == 1) {
+              state = S0;
+            }
+            else {
+              state = S2;
+            }
+        break;
+      case S2:
+            if (a == 1) {
+              state = S1;
+            }
+            else {
+              state = S3;
+            }
+        break;
+      case S3:
+          a=1;
+            state = S2;
+        break;
+      default: // should never get here
+        break;
+    }
+
+    // State Actions
+    switch(state){ 
+      case INIT:
+        break;
+      case S0:
+        digitalWrite(b[3], HIGH);
+        digitalWrite(b[2], LOW);
+        digitalWrite(b[1], LOW);
+        digitalWrite(b[0], LOW);
+        break;
+      case S1:
+        digitalWrite(b[3], LOW);
+        digitalWrite(b[2], HIGH);
+        digitalWrite(b[1], LOW);
+        digitalWrite(b[0], LOW);
+        break;
+      case S2:
+        digitalWrite(b[3], LOW);
+        digitalWrite(b[2], LOW);
+        digitalWrite(b[1], HIGH);
+        digitalWrite(b[0], LOW);
+        break;
+      case S3:
+        digitalWrite(b[3], LOW);
+        digitalWrite(b[2], LOW);
+        digitalWrite(b[1], LOW);
+        digitalWrite(b[0], HIGH);
+        break;
+     default: // should never get here
+        break;
+    }
+}
+
+void loop(){ 
+
+   // Default Arduino function
+  
+  // We track time explicitly in the loop() function,
+  // which is different that the Timer Interrupt
+  // mechanism introduced in the zyBook
+  if ((millis() - lastRan) > period) {
+    Tick(); 
+    lastRan = millis();
+  }  
+}
