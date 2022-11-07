@@ -1,0 +1,719 @@
+/*        Your Name & E-mail: Kelley Zhou (kzhou034@ucr.edu)
+
+*          Discussion Section: 23
+
+ *         Assignment: Lab 5  Exercise 1
+
+ *         Exercise Description: 
+
+ *         I acknowledge all content contained herein, excluding template or example code, is my own original work.
+
+ *
+
+ *         Demo Link: https://youtu.be/_L3Ki2gdx5k 
+
+ */
+
+int i = 0;
+double k = 0.0;
+int c = 0;
+int IN1 = 10;
+int IN2 = 11;
+int IN3 = 12;
+int IN4 = 13;
+int UP = 3;
+int DOWN = 4;
+int LEFT = 2;
+int RIGHT = 5;
+int JS_X = A0;
+int JS_Y = A1;
+int JS_BTN = 7;
+int j_x;
+int j_y;
+int j_btn;
+int prevstate1;
+int sig[4] = {IN1, IN2, IN3, IN4};
+int steps[8][4] { //codes for the motor to turn properly
+  {0, 0, 0, 1},
+  {0, 0, 1, 1},
+  {0, 0, 1, 0},
+  {0, 1, 1, 0},
+  {0, 1, 0, 0},
+  {1, 1, 0, 0},
+  {1, 0, 0, 0},
+  {1, 0, 0, 1},
+};
+
+typedef struct task {
+  int state;
+  unsigned long period;
+  unsigned long elapsedTime;
+  int (*TickFct)(int);
+
+} task;
+
+int delay_gcd;
+const unsigned short tasksNum = 2;
+task tasks[tasksNum];
+
+enum SM1_States { SM1_INIT, SM1_S0, SM1_S1, SM1_S2, SM1_S3, SM1_S4};
+int SM1_Tick(int state1) {
+  switch (state1) { // State transitions
+    case SM1_INIT:
+      state1 = SM1_S0;
+      break;
+    case SM1_S0:
+      if (c == 4) {
+        c = 0;
+        i++;
+
+      }
+      if (i == 8) {
+        i = 0;
+
+      }
+      j_x = analogRead(JS_X);
+      j_y = analogRead(JS_Y);
+      j_btn = digitalRead(JS_BTN);
+
+      if (analogRead(JS_Y) > 900 && (analogRead(JS_X) > 450)) { //right
+        //prevstate1 = 0;
+        state1 = SM1_S0;
+      }
+      else if (digitalRead(JS_BTN) == 0) { //all
+        prevstate1 = 0;
+        state1 = SM1_S4;
+      }
+      else if (analogRead(JS_Y) < 100 && (analogRead(JS_X) > 400)) { //left
+        //prevstate1 = 0;
+        state1 = SM1_S1;
+      }
+      else if (analogRead(JS_X) > 900 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 535)) { //up
+        prevstate1 = 0;
+        state1 = SM1_S2;
+      }
+      else if (analogRead(JS_X) < 200 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 535)) { //down
+        prevstate1 = 0;
+        state1 = SM1_S3;
+      }
+      else {
+        //prevstate1 = 0;
+        state1 = SM1_S0;
+      }
+      
+      break;
+    case SM1_S1: //clockwise
+      if (prevstate1 == 3) {
+        
+      }
+      else {
+        if (c == 4) {
+        c = 0;
+        i--;
+
+        }
+        if (i == -1) {
+          i = 7;
+
+        }
+      }
+      
+      j_x = analogRead(JS_X);
+      j_y = analogRead(JS_Y);
+      j_btn = digitalRead(JS_BTN);
+
+      if (analogRead(JS_Y) > 900 && (analogRead(JS_X) > 450)) { //right
+        //prevstate1 = 1;
+        state1 = SM1_S0;
+      }
+      else if (digitalRead(JS_BTN) == 0) { //all
+        prevstate1 = 1;
+        state1 = SM1_S4;
+      }
+      else if (analogRead(JS_Y) < 100 && (analogRead(JS_X) > 400)) { //left
+        //prevstate1 = 1;
+        state1 = SM1_S1;
+      }
+      else if (analogRead(JS_X) > 900 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 535)) { //up
+        prevstate1 = 1;
+        state1 = SM1_S2;
+      }
+      else if (analogRead(JS_X) < 200 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 535)) { //down
+        prevstate1 = 1;
+        state1 = SM1_S3;
+      }
+      else {
+        //prevstate1 = 1;
+        state1 = SM1_S1;
+      }
+      
+      break;
+    case SM1_S2: //fast (up)
+      if (prevstate1 == 1) {
+        if (c == 4) {
+        c = 0;
+        k -= 0.5;
+        if (k <= 0.0) {
+          k = 8.0;
+        }
+        if (k-0.5 == i) {
+          i--;
+        }
+        // i--;
+
+        }
+        if (i == -1) {
+          i = 7;
+
+        }
+      }
+      else if (prevstate1 == 0) {
+        if (c == 4) {
+        c = 0;
+        k += 0.5;
+        if (k >= 8.0) {
+          k = 0.0;
+        }
+        if (k-0.5 == i) {
+          i++;
+        }
+
+        }
+        if (i == 8) {
+          i = 0;
+
+        }
+      }
+
+      j_x = analogRead(JS_X);
+      j_y = analogRead(JS_Y);
+      j_btn = digitalRead(JS_BTN);
+
+      if (analogRead(JS_Y) > 900 && (analogRead(JS_X) > 450)) { //right
+        //prevstate1 = 2;
+        state1 = SM1_S0;
+      }
+      else if (digitalRead(JS_BTN) == 0) { //all
+        prevstate1 = 2;
+        state1 = SM1_S4;
+      }
+      else if (analogRead(JS_Y) < 100 && (analogRead(JS_X) > 400)) { //left
+        //prevstate1 = 2;
+        state1 = SM1_S1;
+      }
+      else if (analogRead(JS_X) > 900 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 535)) { //up
+        //prevstate1 = 2;
+        state1 = SM1_S2;
+      }
+      else if (analogRead(JS_X) < 200 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 535)) { //down
+        //prevstate1 = 2;
+        state1 = SM1_S3;
+      }
+      else {
+        if (prevstate1 == 0) {
+          state1 = SM1_S0;
+        }
+        else if (prevstate1 == 1) {
+          state1 = SM1_S1;
+        }
+        
+      }
+      break;
+    case SM1_S3: //slow (down)
+      if (prevstate1 != 3) {
+        if (prevstate1 == 1) {
+          if (c == 4) {
+          c = 0;
+          k -= 0.5;
+          if (k <= 0.0) {
+            k = 8.0;
+          }
+          if (k-0.5 == i) {
+            i--;
+          }
+          // i--;
+
+          }
+          if (i == -1) {
+            i = 7;
+
+          }
+        }
+        else if (prevstate1 == 0) {
+          if (c == 4) {
+          c = 0;
+          k += 0.5;
+          if (k >= 8.0) {
+            k = 0.0;
+          }
+          if (k-0.5 == i) {
+            i++;
+          }
+
+          }
+          if (i == 8) {
+            i = 0;
+
+          }
+        }
+      }
+      else {
+        state1 = SM1_S3;
+      }
+
+      j_x = analogRead(JS_X);
+      j_y = analogRead(JS_Y);
+      j_btn = digitalRead(JS_BTN);
+      if (analogRead(JS_Y) > 490 && (analogRead(JS_X) > 490) && prevstate1 == 3) {
+        state1 = SM1_S3;
+      }
+      else if (analogRead(JS_Y) > 900 && (analogRead(JS_X) > 450)) { //right
+        //prevstate1 = 3;
+        state1 = SM1_S0;
+      }
+      else if (digitalRead(JS_BTN) == 0) { //all
+        prevstate1 = 3;
+        state1 = SM1_S4;
+      }
+      else if (analogRead(JS_Y) < 100 && (analogRead(JS_X) > 400)) { //left
+        //prevstate1 = 3;
+        state1 = SM1_S1;
+      }
+      else if (analogRead(JS_X) > 900 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 535)) { //up
+        //prevstate1 = 3;
+        state1 = SM1_S2;
+      }
+      else if (analogRead(JS_X) < 200 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 535)) { //down
+        //prevstate1 = 3;
+        state1 = SM1_S3;
+      }
+      else {
+        if (prevstate1 == 0) {
+          prevstate1 == 3;
+          state1 = SM1_S0;
+        }
+        else if (prevstate1 == 1) {
+          prevstate1 == 3;
+          state1 = SM1_S1;
+        }
+        
+      }
+      break;
+    case SM1_S4: //stop
+      
+      j_x = analogRead(JS_X);
+      j_y = analogRead(JS_Y);
+      j_btn = digitalRead(JS_BTN);
+
+      if (analogRead(JS_Y) > 900 && (analogRead(JS_X) > 450)) { //right
+        //prevstate1 = 4;
+        state1 = SM1_S0;
+      }
+      else if (digitalRead(JS_BTN) == 0) { //all
+        //prevstate1 = 4;
+        state1 = SM1_S4;
+      }
+      else if (analogRead(JS_Y) < 100 && (analogRead(JS_X) > 400)) { //left
+        //prevstate1 = 4;
+        state1 = SM1_S1;
+      }
+      else if (analogRead(JS_X) > 900 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 535)) { //up
+        //prevstate1 = 4;
+        state1 = SM1_S2;
+      }
+      else if (analogRead(JS_X) < 200 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 535)) { //down
+        //prevstate1 = 4;
+        state1 = SM1_S3;
+      }
+     else {
+       if (prevstate1 == 0) {
+        state1 = SM1_S0;
+       }
+       else if (prevstate1 == 1) {
+        state1 = SM1_S1;
+       }
+       else if (prevstate1 == 2) {
+        state1 = SM1_S2;
+       }
+       else if (prevstate1 == 3) {
+        state1 = SM1_S3;
+       }
+     }
+      break;
+
+  }
+  switch (state1) { // State Action
+    case SM1_INIT:
+      break;
+    case SM1_S0:
+      for (c; c < 4; c++) {
+        if (steps[i][c] == 1) {
+          digitalWrite(sig[c], HIGH);
+
+        }
+        else {
+          digitalWrite(sig[c], LOW);
+
+        }
+
+      }
+      break;
+    case SM1_S1: //clockwise
+      for (c; c < 4; c++) {
+        if (steps[i][c] == 1) {
+          digitalWrite(sig[c], HIGH);
+
+        }
+        else {
+          digitalWrite(sig[c], LOW);
+
+        }
+
+      }
+      break;
+    case SM1_S2: //fast (up)
+      for (c; c < 4; c++) {
+        if (steps[i][c] == 1) {
+          i++;
+          digitalWrite(sig[c], HIGH);
+
+        }
+        else {
+          digitalWrite(sig[c], LOW);
+
+        }
+
+      }
+      break;
+    case SM1_S3: //slow (down)
+      for (c; c < 4; c++) {
+        if (steps[i][c] == 1 && i%2==0) {
+          digitalWrite(sig[c], HIGH);
+
+        }
+        else {
+          digitalWrite(sig[c], LOW);
+          digitalWrite(sig[c], HIGH);
+
+        }
+
+      }
+      break;
+    case SM1_S4: //stop
+      for (c; c < 4; c++) {
+        if (steps[i][c] == 1) {
+          digitalWrite(sig[c], LOW);
+
+        }
+        else {
+          digitalWrite(sig[c], LOW);
+
+        }
+
+      }
+      break;
+
+  }
+
+  return state1;
+}
+
+enum SM2_States { SM2_INIT, SM2_S0, SM2_S1, SM2_S2, SM2_S3, SM2_S4, SM2_UPWAIT, SM2_DOWNWAIT};
+int SM2_Tick(int state2) {
+  switch (state2) { // State transitions
+    case SM2_INIT:
+      //State Transition
+      state2 = SM2_S0;
+      break;
+    case SM2_S0:
+      if (analogRead(JS_Y) > 900 && (analogRead(JS_X) > 450)) { //right
+        state2 = SM2_S0;
+      }
+      else if (digitalRead(JS_BTN) == 0) { //all
+        state2 = SM2_S4;
+      }
+      else if (analogRead(JS_Y) < 100 && (analogRead(JS_X) > 400)) { //left
+        state2 = SM2_S1;
+      }
+      else if (analogRead(JS_X) > 900 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 535)) { //up
+        state2 = SM2_S2;
+      }
+      else if (analogRead(JS_X) < 200 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 535)) { //down
+        state2 = SM2_S3;
+      }
+      
+      break;
+
+    case SM2_S1:
+      if (analogRead(JS_Y) > 900 && (analogRead(JS_X) > 490 && analogRead(JS_X) < 600)) { //right
+        state2 = SM2_S0;
+      }
+      else if (digitalRead(JS_BTN) == 0) { //all
+        state2 = SM2_S4;
+      }
+      else if (analogRead(JS_Y) < 100 && (analogRead(JS_X) > 490 && analogRead(JS_X) < 600)) { //left
+        state2 = SM2_S1;
+      }
+      else if (analogRead(JS_X) > 900 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 600)) { //up
+        state2 = SM2_S2;
+      }
+      else if (analogRead(JS_X) < 200 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 600)) { //down
+        state2 = SM2_S3;
+      }
+      
+      break;
+    case SM2_S2:
+      if (analogRead(JS_Y) > 900 && (analogRead(JS_X) > 490 && analogRead(JS_X) < 600)) { //right
+        state2 = SM2_S0;
+      }
+      else if (digitalRead(JS_BTN) == 0) { //all
+        state2 = SM2_S4;
+      }
+      else if (analogRead(JS_Y) < 100 && (analogRead(JS_X) > 490 && analogRead(JS_X) < 600)) { //left
+        state2 = SM2_S1;
+      }
+      else if (analogRead(JS_X) > 900 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 600)) { //up
+        state2 = SM2_S2;
+      }
+      else if (analogRead(JS_X) < 200 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 600)) { //down
+        state2 = SM2_S3;
+      }
+      else if (analogRead(JS_X) < 525 && analogRead(JS_Y < 525)) {
+        state2 = SM2_UPWAIT;
+      }
+      
+      break;
+    case SM2_S3:
+      if (analogRead(JS_Y) > 900 && (analogRead(JS_X) > 490 && analogRead(JS_X) < 600)) { //right
+        state2 = SM2_S0;
+      }
+      else if (digitalRead(JS_BTN) == 0) { //all
+        state2 = SM2_S4;
+      }
+      else if (analogRead(JS_Y) < 100 && (analogRead(JS_X) > 490 && analogRead(JS_X) < 600)) { //left
+        state2 = SM2_S1;
+      }
+      else if (analogRead(JS_X) > 900 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 600)) { //up
+        state2 = SM2_S2;
+      }
+      else if (analogRead(JS_X) < 200 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 600)) { //down
+        state2 = SM2_S3;
+      }
+      else if (analogRead(JS_X) < 525 && analogRead(JS_Y < 525)) {
+        state2 = SM2_DOWNWAIT;
+      }
+      
+      break;
+    case SM2_S4:
+      if (analogRead(JS_Y) > 900 && (analogRead(JS_X) > 490 && analogRead(JS_X) < 600)) { //right
+        state2 = SM2_S0;
+      }
+      else if (digitalRead(JS_BTN) == 0) { //all
+        state2 = SM2_S4;
+      }
+      else if (analogRead(JS_Y) < 100 && (analogRead(JS_X) > 490 && analogRead(JS_X) < 600)) { //left
+        state2 = SM2_S1;
+      }
+      else if (analogRead(JS_X) > 900 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 600)) { //up
+        state2 = SM2_S2;
+      }
+      else if (analogRead(JS_X) < 200 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 600)) { //down
+        state2 = SM2_S3;
+      }
+      else {
+        state2 = SM2_S0;
+      }
+      
+      break;
+    case SM2_UPWAIT:
+      if (analogRead(JS_Y) > 900 && (analogRead(JS_X) > 490 && analogRead(JS_X) < 600)) { //right
+        state2 = SM2_S0;
+      }
+      else if (digitalRead(JS_BTN) == 0) { //all
+        state2 = SM2_S4;
+      }
+      else if (analogRead(JS_Y) < 100 && (analogRead(JS_X) > 490 && analogRead(JS_X) < 600)) { //left
+        state2 = SM2_S1;
+      }
+      else if (analogRead(JS_X) > 900 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 600)) { //up
+        state2 = SM2_S2;
+      }
+      else if (analogRead(JS_X) < 200 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 600)) { //down
+        state2 = SM2_S3;
+      }
+      break;
+    case SM2_DOWNWAIT:
+      if (analogRead(JS_Y) > 900 && (analogRead(JS_X) > 490 && analogRead(JS_X) < 600)) { //right
+        state2 = SM2_S0;
+      }
+      else if (digitalRead(JS_BTN) == 0) { //all
+        state2 = SM2_S4;
+      }
+      else if (analogRead(JS_Y) < 100 && (analogRead(JS_X) > 490 && analogRead(JS_X) < 600)) { //left
+        state2 = SM2_S1;
+      }
+      else if (analogRead(JS_X) > 900 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 600)) { //up
+        state2 = SM2_S2;
+      }
+      else if (analogRead(JS_X) < 200 && (analogRead(JS_Y) > 490 && analogRead(JS_Y) < 600)) { //down
+        state2 = SM2_S3;
+      }
+      break;
+  }
+  switch (state2) { // State Action
+    case SM2_INIT:
+      digitalWrite(UP, LOW);
+      digitalWrite(DOWN, LOW);
+      digitalWrite(LEFT, LOW);
+      digitalWrite(RIGHT, HIGH);
+
+      j_x = analogRead(JS_X);
+      j_y = analogRead(JS_Y);
+      j_btn = digitalRead(JS_BTN);
+
+      Serial.print("X: "); Serial.print(j_x);
+      Serial.print(" Y: " ); Serial.print(j_y);
+      Serial.print(" BTN: "); Serial.println(j_btn);
+      break;
+    case SM2_S0: //right
+      digitalWrite(UP, LOW);
+      digitalWrite(DOWN, LOW);
+      digitalWrite(LEFT, LOW);
+      digitalWrite(RIGHT, HIGH);
+
+      j_x = analogRead(JS_X);
+      j_y = analogRead(JS_Y);
+      j_btn = digitalRead(JS_BTN);
+
+      Serial.print("X: "); Serial.print(j_x);
+      Serial.print(" Y: " ); Serial.print(j_y);
+      Serial.print(" BTN: "); Serial.println(j_btn);
+      
+      break;
+    case SM2_S1: //left
+      digitalWrite(UP, LOW);
+      digitalWrite(DOWN, LOW);
+      digitalWrite(LEFT, HIGH);
+      digitalWrite(RIGHT, LOW);
+
+      j_x = analogRead(JS_X);
+      j_y = analogRead(JS_Y);
+      j_btn = digitalRead(JS_BTN);
+
+      Serial.print("X: "); Serial.print(j_x);
+      Serial.print(" Y: " ); Serial.print(j_y);
+      Serial.print(" BTN: "); Serial.println(j_btn);
+      break;
+    case SM2_S2: //up
+      digitalWrite(UP, HIGH);
+      digitalWrite(DOWN, LOW);
+      digitalWrite(LEFT, LOW);
+      digitalWrite(RIGHT, HIGH);
+
+      j_x = analogRead(JS_X);
+      j_y = analogRead(JS_Y);
+      j_btn = digitalRead(JS_BTN);
+
+      Serial.print("X: "); Serial.print(j_x);
+      Serial.print(" Y: " ); Serial.print(j_y);
+      Serial.print(" BTN: "); Serial.println(j_btn);
+      break;
+    case SM2_S3: //down
+      digitalWrite(UP, LOW);
+      digitalWrite(DOWN, HIGH);
+      digitalWrite(LEFT, LOW);
+      digitalWrite(RIGHT, HIGH);
+
+      j_x = analogRead(JS_X);
+      j_y = analogRead(JS_Y);
+      j_btn = digitalRead(JS_BTN);
+
+      Serial.print("X: "); Serial.print(j_x);
+      Serial.print(" Y: " ); Serial.print(j_y);
+      Serial.print(" BTN: "); Serial.println(j_btn);
+      break;
+    case SM2_S4: //all
+      digitalWrite(UP, HIGH);
+      digitalWrite(DOWN, HIGH);
+      digitalWrite(LEFT, HIGH);
+      digitalWrite(RIGHT, HIGH);
+
+      j_x = analogRead(JS_X);
+      j_y = analogRead(JS_Y);
+      j_btn = digitalRead(JS_BTN);
+
+      Serial.print("X: "); Serial.print(j_x);
+      Serial.print(" Y: " ); Serial.print(j_y);
+      Serial.print(" BTN: "); Serial.println(j_btn);
+      break;
+
+    case SM2_UPWAIT:
+      digitalWrite(UP, LOW);
+      digitalWrite(DOWN, LOW);
+      digitalWrite(LEFT, LOW);
+      digitalWrite(RIGHT, HIGH);
+
+      j_x = analogRead(JS_X);
+      j_y = analogRead(JS_Y);
+      j_btn = digitalRead(JS_BTN);
+
+      Serial.print("X: "); Serial.print(j_x);
+      Serial.print(" Y: " ); Serial.print(j_y);
+      Serial.print(" BTN: "); Serial.println(j_btn);
+      break;
+    case SM2_DOWNWAIT:
+      digitalWrite(UP, LOW);
+      digitalWrite(DOWN, LOW);
+      digitalWrite(LEFT, LOW);
+      digitalWrite(RIGHT, HIGH);
+
+      j_x = analogRead(JS_X);
+      j_y = analogRead(JS_Y);
+      j_btn = digitalRead(JS_BTN);
+
+      Serial.print("X: "); Serial.print(j_x);
+      Serial.print(" Y: " ); Serial.print(j_y);
+      Serial.print(" BTN: "); Serial.println(j_btn);
+      break;
+  }
+
+  return state2;
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+  pinMode(UP, OUTPUT);
+  pinMode(DOWN, OUTPUT);
+  pinMode(LEFT, OUTPUT);
+  pinMode(RIGHT, OUTPUT);
+  pinMode(JS_BTN, INPUT_PULLUP);
+  Serial.begin(9600);
+
+
+  unsigned char i = 0;
+  tasks[i].state = SM1_INIT;
+  tasks[i].period = 1;
+  tasks[i].elapsedTime = 0;
+  tasks[i].TickFct = &SM1_Tick;
+  i++;
+  tasks[i].state = SM2_INIT;
+  tasks[i].period = 50;
+  tasks[i].elapsedTime = 0;
+  tasks[i].TickFct = &SM2_Tick;
+
+  delay_gcd = 1; // GCD
+}
+
+void loop() {
+  unsigned char i;
+  for (i = 0; i < tasksNum; ++i) {
+    if ( (millis() - tasks[i].elapsedTime) >= tasks[i].period) {
+      tasks[i].state = tasks[i].TickFct(tasks[i].state);
+      tasks[i].elapsedTime = millis(); // Last time this task was ran
+    }
+  }
+}
