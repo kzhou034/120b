@@ -1,0 +1,157 @@
+/*        Your Name & E-mail: Kelley Zhou (kzhou034@ucr.edu)
+
+*          Discussion Section: 23
+
+ *         Assignment: Lab 3  Exercise 1
+
+ *         Exercise Description: turning potentiometer changes which leds are lit up
+
+ *        ---> lights up from one direction to the other and turns of from one direction to the other
+
+ *        ---> ex: 1000 light up all 4, 0111 lights up all except the leftmost
+
+ *         I acknowledge all content contained herein, excluding template or example code, is my own original work.
+
+ *
+
+ *         Demo Link: https://youtu.be/pW25HqYYRWQ 
+
+ */
+
+int l1 = 5;
+int l2 = 4;
+int l3 = 3;
+int l4 = 2;
+int rlp = 9;
+int blp = 10;
+int glp = 11;
+int reading = 0;
+int prval = analogRead(A1);
+int B[4] = {2, 3, 4, 5};
+
+void setup() {
+  pinMode(rlp, OUTPUT);
+  pinMode(glp, OUTPUT);
+  pinMode(blp, OUTPUT);
+  pinMode(l1, OUTPUT);
+  pinMode(l2, OUTPUT);
+  pinMode(l3, OUTPUT);
+  pinMode(l4, OUTPUT);
+  pinMode(5, OUTPUT);
+  pinMode(4, OUTPUT);
+  pinMode(3, OUTPUT);
+  pinMode(2, OUTPUT);
+  Serial.begin(9600);
+}
+
+enum States {INIT, S0, S1} state = INIT;
+
+// This function takes in the state as an argument & returns the current state
+void Tick() {
+
+  switch (state) { // State transitions
+
+    case INIT:
+      //State Transition
+      state = S0;
+      break;
+
+    case S0:
+      if (millis() % 1000 == 0) {
+        state = S1;
+      }
+      else {
+        state = S0;
+      }
+      break;
+
+    case S1:
+      if (millis() % 1000 == 0) {
+        state = S0;
+      }
+      else {
+        state = S1;
+      }
+
+      //State Transition
+      break;
+  }
+
+  switch (state) { // State Action
+
+    case INIT:
+      //State Action
+      break;
+
+    case S0:
+      //State Action
+      if (analogRead(A1) < 70) {
+        for (int i = 0; i <= 3; i++) {
+          digitalWrite(B[i], LOW);
+        }
+      }
+      else {
+        FOUR_LED();
+      }
+      break;
+
+    case S1:
+      //State Action
+      if (analogRead(A1) < 70) {
+        for (int i = 0; i <= 3; i++) {
+          digitalWrite(B[i], LOW);
+        }
+      }
+      else {
+        FOUR_LED();
+      }
+      break;
+  }
+}
+
+void FOUR_LED() {
+  
+  reading = analogRead(A0);
+  reading = map (reading, 0, 1023, 0, 15);
+  //Serial.println(reading);
+  
+  if(reading == 0x01) {
+    digitalWrite(B[0], HIGH);
+    digitalWrite(B[1], LOW);
+    digitalWrite(B[2], LOW);
+    digitalWrite(B[3], LOW);
+  }
+  else if (reading >= 0x02 && reading <= 0x03) {
+    digitalWrite(B[0], HIGH);
+    digitalWrite(B[1], HIGH);
+    digitalWrite(B[2], LOW);
+    digitalWrite(B[3], LOW);
+  }
+  else if (reading <= 0x07 && reading >= 0x04) {
+    digitalWrite(B[0], HIGH);
+    digitalWrite(B[1], HIGH);
+    digitalWrite(B[2], HIGH);
+    digitalWrite(B[3], LOW);
+  }
+  else if (reading >= 0x08) {
+    digitalWrite(B[0], HIGH);
+    digitalWrite(B[1], HIGH);
+    digitalWrite(B[2], HIGH);
+    digitalWrite(B[3], HIGH);
+  }
+  else if (reading == 0) {
+    digitalWrite(B[0], LOW);
+    digitalWrite(B[1], LOW);
+    digitalWrite(B[2], LOW);
+    digitalWrite(B[3], LOW);
+  }
+}
+
+
+void loop() {
+
+  ///Default arduino function
+
+ Tick();
+  
+}
