@@ -1,0 +1,60 @@
+/*        Your Name & E-mail: Kelley Zhou (kzhou034@ucr.edu)
+
+*          Discussion Section: 23
+
+ *         Assignment: Lab 2  Exercise 1
+
+ *         Exercise Description: Push one button to turn LEDs on (stays on), push other button to turn LEDs off (stays off)
+
+ *        
+
+ *         I acknowledge all content contained herein, excluding template or example code, is my own original work.
+
+ *
+
+ *         Demo Link: https://youtu.be/qdrjB1t8CPI 
+
+ */
+
+int B[4] = {2, 3, 4, 5};
+int Y = 9;
+int X = 8;
+
+int num = 750;
+void setup() {
+
+  // put your setup code here, to run once:
+
+  pinMode(Y, INPUT_PULLUP);
+  pinMode(X, INPUT);
+  pinMode(5, OUTPUT);
+  pinMode(4, OUTPUT);
+  pinMode(3, OUTPUT);
+  pinMode(2, OUTPUT);
+  Serial.begin(9600);
+}
+
+void flash() {
+  int button1 = digitalRead(Y);
+  int button2 = digitalRead(X);
+  
+  if (button2 == HIGH) {
+    for (int j = 0; j < 4; j++) {
+      digitalWrite(B[j], LOW);
+    }
+    
+  }
+  else if (button1 == LOW) {
+    for (int j = 0; j < 4; j++) {
+      digitalWrite(B[j], HIGH);
+    }
+  }
+  
+    Serial.println(analogRead(A0));
+}
+void loop() {
+
+  // put your main code here, to run repeatedly:
+
+  flash();
+}
