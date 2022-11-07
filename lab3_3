@@ -1,0 +1,218 @@
+/*        Your Name & E-mail: Kelley Zhou (kzhou034@ucr.edu)
+
+*          Discussion Section: 23
+
+ *         Assignment: Lab 3  Exercise 3
+
+ *         Exercise Description: potentiometer gets reading for led lights
+
+ *         ---> photoresistor is dark -> turns on small leds and turns rgb led on (cycles through lights)
+
+ *         ---> photoresistor is bright -> turns on the small leds and turns off the rgb led
+
+ *         I acknowledge all content contained herein, excluding template or example code, is my own original work.
+
+ *
+
+ *         Demo Link: https://youtu.be/axE2Okmpge0 
+
+ */
+
+int l1 = 5;
+int l2 = 4;
+int l3 = 3;
+int l4 = 2;
+int rlp = 9;
+int blp = 10;
+int glp = 11;
+int reading = 0;
+int interval = 500;
+unsigned int val1 = 255;
+int prval = analogRead(A1);
+int B[4] = {2, 3, 4, 5};
+
+void setup() {
+  pinMode(rlp, OUTPUT);
+  pinMode(glp, OUTPUT);
+  pinMode(blp, OUTPUT);
+  pinMode(l1, OUTPUT);
+  pinMode(l2, OUTPUT);
+  pinMode(l3, OUTPUT);
+  pinMode(l4, OUTPUT);
+  pinMode(5, OUTPUT);
+  pinMode(4, OUTPUT);
+  pinMode(3, OUTPUT);
+  pinMode(2, OUTPUT);
+  Serial.begin(9600);
+}
+
+enum States {INIT, L4, S0, S1, S2} state = INIT;
+
+// This function takes in the state as an argument & returns the current state
+void Tick(int timer) {
+  if (timer%interval == 0) {
+    switch (state) { // State transitions
+  
+      case INIT:
+        //State Transition
+        state = L4;
+        break;
+  
+      case L4:
+        if (analogRead(A1) < 70) {
+          RGB_LED(0, 0, 0);
+          state = L4;
+        }
+        else {
+          state = S0;
+        }
+  
+      case S0:
+  
+          if (timer % interval == 0 && analogRead(A1) <= 70) {
+            RGB_LED(val1, 0, 0);
+            state = S1;
+          }
+          else if (analogRead(A1) > 70) {
+            RGB_LED(0, 0, 0);
+            state = L4;
+          }
+          else {
+            RGB_LED(val1, 0, 0);
+            state = S0;
+          }
+          break;
+  
+      case S1:
+          
+          if (timer % interval == 0 && analogRead(A1) <= 70) {
+            RGB_LED(0, val1, 0);
+            state = S2;
+          }
+          else if (analogRead(A1) > 70) {
+            RGB_LED(0, 0, 0);
+            state = L4;
+          }
+          else {
+            RGB_LED(0, val1, 0);
+            state = S1;
+          }
+          break;
+  
+      case S2:
+          
+  
+          if (timer % interval == 0 && analogRead(A1) <= 70) {
+            RGB_LED(0, 0, val1);
+            state = S0;
+          }
+          else if (analogRead(A1) > 70) {
+            RGB_LED(0, 0, 0);
+            state = L4;
+          }
+          else {
+            RGB_LED(0, 0, val1);
+            state = S2;
+          }
+          break;
+    }
+  
+    switch (state) { // State Action
+  
+      case INIT:
+        //State Action
+        break;
+  
+      case L4:
+        if (analogRead(A1) < 70) {
+          for (int i = 0; i <= 3; i++) {
+            digitalWrite(B[i], LOW);
+          }
+        }
+        else {
+          FOUR_LED();
+        }
+        break;
+  
+      case S0:
+        //State Action
+        if (analogRead(A1) < 70) {
+          for (int i = 0; i <= 3; i++) {
+            digitalWrite(B[i], LOW);
+          }
+        }
+        break;
+  
+      case S1:
+        //State Action
+        if (analogRead(A1) < 70) {
+          for (int i = 0; i <= 3; i++) {
+            digitalWrite(B[i], LOW);
+          }
+        }
+        break;
+
+      case S2:
+        //State Action
+        if (analogRead(A1) < 70) {
+          for (int i = 0; i <= 3; i++) {
+            digitalWrite(B[i], LOW);
+          }
+        }
+        break;
+    }
+  }
+}
+
+void RGB_LED(unsigned int red, unsigned int blue, unsigned int green) {
+  analogWrite(rlp, red);
+  analogWrite(blp, blue);
+  analogWrite(glp, green);
+}
+
+void FOUR_LED() {
+  
+  reading = analogRead(A0);
+  reading = map (reading, 0, 1023, 0, 15);
+  Serial.println(reading);
+  
+  if(reading == 0x01) {
+    digitalWrite(B[0], HIGH);
+    digitalWrite(B[1], LOW);
+    digitalWrite(B[2], LOW);
+    digitalWrite(B[3], LOW);
+  }
+  else if (reading >= 0x02 && reading <= 0x03) {
+    digitalWrite(B[0], HIGH);
+    digitalWrite(B[1], HIGH);
+    digitalWrite(B[2], LOW);
+    digitalWrite(B[3], LOW);
+  }
+  else if (reading <= 0x07 && reading >= 0x04) {
+    digitalWrite(B[0], HIGH);
+    digitalWrite(B[1], HIGH);
+    digitalWrite(B[2], HIGH);
+    digitalWrite(B[3], LOW);
+  }
+  else if (reading >= 0x08) {
+    digitalWrite(B[0], HIGH);
+    digitalWrite(B[1], HIGH);
+    digitalWrite(B[2], HIGH);
+    digitalWrite(B[3], HIGH);
+  }
+  else if (reading == 0) {
+    digitalWrite(B[0], LOW);
+    digitalWrite(B[1], LOW);
+    digitalWrite(B[2], LOW);
+    digitalWrite(B[3], LOW);
+  }
+}
+
+
+void loop() {
+
+  ///Default arduino function
+  int timer = millis();
+ Tick(timer);
+  timer++;
+}
