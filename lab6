@@ -1,0 +1,470 @@
+/*        Your Name & E-mail: Kelley Zhou (kzhou034@ucr.edu)
+
+*          Discussion Section: 23
+
+ *         Assignment: Lab 6
+
+ *         Exercise Description: 
+
+ *         I acknowledge all content contained herein, excluding template or example code, is my own original work.
+
+ *
+
+ *         Demo Link: https://youtu.be/hE7fc8JmmlU 
+
+ */
+
+unsigned char h=0;
+unsigned char l=0;
+unsigned char tick=0;
+unsigned char j=0;
+unsigned char k=0;
+unsigned char m=0;
+
+unsigned char prevstate=6;
+unsigned char offmid = 0;
+
+typedef struct task {
+  int state;
+  unsigned long period;
+  unsigned long elapsedTime;
+  int (*TickFct)(int);
+
+} task;
+
+int delay_gcd;
+const unsigned short tasksNum = 5;
+task tasks[tasksNum];
+
+//a0, left photoresistor, also lights up red led pin 2
+enum SM1_States { SM1_INIT, on, off};
+int SM1_Tick(int state1) {
+  switch (state1) { // State transitions
+    case SM1_INIT:
+      state1 = off;
+      break;
+    case off:
+    // turn on the system
+//      Serial.print("A0: ");
+//      Serial.println(analogRead(A0));
+      if (analogRead(A0) <= 11 && analogRead(A1) <= 11) {
+        state1 = on;
+      }
+      else {
+        state1 = off;
+      }
+      break;
+
+    case on:
+      if (analogRead(A0) > 11 && analogRead(A1) > 11) {
+        state1 = on;
+      }
+      else {
+        state1 = off;
+      }
+      break;
+  }
+  
+  switch (state1) { // State Action
+    case SM1_INIT:
+      break;
+    case off:
+        break;
+    case on:
+      if (analogRead(A0) < 15) {
+        Serial.print("A0: ");
+        Serial.println(analogRead(A0));
+        digitalWrite(4, HIGH);
+      }
+      else {
+        digitalWrite(4, LOW);
+      }
+      break;   
+  }
+  return state1;
+}
+
+//a1, right photoresistor, also lights up red led pin 4
+enum SM2_States { SM2_INIT, on2, off2, wait2};
+int SM2_Tick(int state2) {
+  switch (state2) { // State transitions
+    case SM2_INIT:
+      state2 = off2;
+      break;
+    case off2:
+      //turn on the system
+//      Serial.print("A1: ");
+//      Serial.println(analogRead(A1));
+      if (analogRead(A0) <= 11 && analogRead(A1) <= 11) {
+        state2 = on2;
+      }
+      else if (analogRead(A0) < 15 && analogRead(A1) <= 15) {
+        offmid--;
+      }
+      else {
+        state2 = off2;
+      }
+      break;
+    case on2:
+      if (analogRead(A0) > 11 && analogRead(A1) > 11) {
+        state2 = on2;
+      }
+      else {
+        state2 = off2;
+      }
+      break;
+
+  }
+  switch (state2) { // State Action
+    case SM2_INIT:
+      break;
+    case off2:
+      break;
+    case wait2:
+        break;
+    case on2:
+      if (analogRead(A1) < 15) {
+        Serial.print("A1: ");
+        Serial.println(analogRead(A1));
+        digitalWrite(2, HIGH);
+      }
+      else {
+        digitalWrite(2, LOW);
+      }
+      break;
+  }
+
+  return state2;
+}
+
+
+//blue light pin 3
+enum blue_states {init_b, pwmhigh_b, pwmlow_b, off_b};
+int blue_Tick(int blue) {
+  switch (blue) { // State transitions
+    case init_b:
+      h = 2;
+      l = 8;
+      Serial.println("BLUE INIT");
+      tick = 0;
+      //prevstate = 6;   
+      if (analogRead(A0) > 15 && analogRead(A1) > 15 && prevstate == 6) {
+        blue = pwmhigh_b;
+      }
+      else {
+        blue = init_b;
+      }
+      break;
+
+    case pwmhigh_b:
+     Serial.println("BLUE HI");
+        if (analogRead(A0) < 15 || analogRead(A1) < 15) {
+          offmid++;
+          blue = init_b;
+        }
+        else if (tick == 100) {
+          blue = off_b;
+        }
+        else {
+          j++;
+          tick++;
+          if (j == h) {
+              j=0;
+              blue = pwmlow_b;
+          }
+          else {
+              blue = pwmhigh_b;
+          }
+        }
+        
+      break;
+    case pwmlow_b:
+      Serial.println("BLUE LO");
+        if (analogRead(A0) < 15 || analogRead(A1) < 15) {
+          offmid++;
+          blue = init_b;
+        }
+        else if (tick == 100) {
+            tick=0;
+          blue = off_b;
+        }
+        else {
+          j++;
+          tick++;
+          if (j == l) {
+              j=0;
+              prevstate = 3;
+              blue = off_b;
+          }
+          else {
+              blue = pwmlow_b;
+          }
+        }
+        
+      break;
+
+    case off_b:
+      Serial.println("BLUE OFF");
+      if (prevstate == 6) {
+        blue = init_b;
+      }
+      else {
+        blue = off_b;
+      }
+  }
+  switch (blue) { // State Action
+    case init_b:
+      break;
+    case pwmhigh_b:
+        digitalWrite(3, HIGH);
+      break;
+    case pwmlow_b:
+        digitalWrite(3, LOW);
+      break;
+    case off_b:
+        digitalWrite(3, LOW);
+      break;
+  }
+
+  return blue;
+}
+
+
+//white light pin 5
+enum white_states {init_w, off_w, on_w, wait_w, pwmhigh_w, pwmlow_w};
+int white_Tick(int white) {
+  switch (white) { // State transitions
+    case init_w:
+      h = 7;
+      l = 3;
+      tick = 0;
+      //prevstate = 3;
+      if (analogRead(A0) > 15 && analogRead(A1) > 15 && prevstate == 3) {
+        white = pwmhigh_w;
+      }
+      else {
+        white = init_w;
+      }
+      break;
+    
+    case pwmhigh_w:
+      if (analogRead(A0) < 15 || analogRead(A1) < 15) {
+          offmid++;
+          white = init_w;
+      }
+      else if (tick == 100) {
+          white = off_w;
+      }
+      else {
+        k++;
+        tick++;
+        if (k==h) {
+          k=0;
+          white = pwmlow_w;
+        }
+        else {
+          white = pwmhigh_w;
+        }
+      }
+      break;
+    case pwmlow_w:
+      if (analogRead(A0) < 15 || analogRead(A1) < 15) {
+        offmid++;
+          white = init_w;
+      }
+      else if (tick == 100) {
+          tick=0;
+          white = off_w;
+      }
+      else {
+       k++;
+        tick++;
+        if (k==h) {
+          k=0;
+          prevstate = 5;
+          white = off_w;
+        }
+        else {
+          white = pwmlow_w;
+        }
+      }
+      break;
+    case off_w:
+      //turn on the system
+      if (prevstate == 3) {
+        white = init_w;
+      }
+      else {
+        white = off_w;
+      }
+      break;
+  }
+  switch (white) { // State Action
+    case init_w:
+      digitalWrite(5, LOW);
+      break;
+    case pwmhigh_w:
+        digitalWrite(5, HIGH);
+      break;
+    case pwmlow_w:
+        digitalWrite(5, LOW);
+      break;
+    case off_w:
+        digitalWrite(5, LOW);
+      break;
+  }
+
+  return white;
+}
+
+
+//green light pin 6
+enum green_states {init_g, off_g, on_g, wait_g, pwmhigh_g, pwmlow_g};
+int green_Tick(int green) {
+  switch (green) { // State transitions
+    case init_g:
+      h = 1;
+      l = 9;
+      tick = 0;
+      //prevstate = 3;
+      if (analogRead(A0) > 15 && analogRead(A1) > 15 && prevstate == 5) {
+        green = pwmhigh_g;
+      }
+      else {
+        green = init_g;
+      }
+      break;
+
+    case pwmhigh_g:
+      if (analogRead(A0) < 15 || analogRead(A1) < 15) {
+          offmid++;
+          green = init_g;
+      }
+      else if (tick == 100) {
+          green = off_g;
+      }
+      else {
+        m++;
+        tick++;
+        if (m==h) {
+          m=0;
+          green = pwmlow_g;
+        }
+        else {
+          green = pwmhigh_g;
+        }
+      }
+      break;
+    case pwmlow_g:
+      if (analogRead(A0) < 15 || analogRead(A1) < 15) {
+          offmid++;
+          green = init_g;
+      }
+      else if (tick == 100) {
+          tick=0;
+          green = off_g;
+      }
+      else {
+       m++;
+        tick++;
+        if (m==h) {
+          m=0;
+          prevstate = 6;
+          green = off_g;
+        }
+        else {
+          green = pwmlow_g;
+        }
+      }
+      break;
+    case off_g:
+      //turn on the system
+      if (prevstate == 5) {
+        green = init_g;
+      }
+      else {
+        green = off_g;
+      }
+      break;
+  }
+  switch (green) { // State Action
+    case init_g:
+      digitalWrite(6, LOW);
+      break;
+    case pwmhigh_g:
+        digitalWrite(6, HIGH);
+      break;
+    case pwmlow_g:
+        digitalWrite(6, LOW);
+      break;
+    case off_g:
+        digitalWrite(6, LOW);
+      break;
+  }
+
+  return green;
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(2, OUTPUT);
+  pinMode(3, OUTPUT);
+  pinMode(4, OUTPUT);
+  pinMode(5, OUTPUT);
+  pinMode(6, OUTPUT);
+  
+  unsigned char i = 0;
+
+  //a0 and red led
+  tasks[i].state = SM1_INIT;
+  tasks[i].period = 200;
+  tasks[i].elapsedTime = 0;
+  tasks[i].TickFct = &SM1_Tick;
+  i++;
+  //a1 and yellow led
+  tasks[i].state = SM2_INIT;
+  tasks[i].period = 200;
+  tasks[i].elapsedTime = 0;
+  tasks[i].TickFct = &SM2_Tick;
+  i++;
+  //blue led
+  tasks[i].state = init_b;
+  tasks[i].period = 300;
+  tasks[i].elapsedTime = 0;
+  tasks[i].TickFct = &blue_Tick;
+  i++;
+  //white led
+  tasks[i].state = init_w;
+  tasks[i].period = 500;
+  tasks[i].elapsedTime = tasks[i].period;
+  tasks[i].TickFct = &white_Tick;
+  i++;
+  //green led
+  tasks[i].state = init_g;
+  tasks[i].period = 100;
+  tasks[i].elapsedTime = 0;
+  tasks[i].TickFct = &green_Tick;
+  
+  delay_gcd = 1000; // GCD
+
+  Serial.begin(9600);
+}
+
+void loop() {
+  Serial.print("A0: ");
+  Serial.println(analogRead(A0));
+  Serial.print("A1: ");
+  Serial.println(analogRead(A1));
+  Serial.print("j: ");
+  Serial.println(j);
+  Serial.print("tick: ");
+  Serial.println(tick);
+  
+  unsigned char i;
+  for (i = 0; i < tasksNum; ++i) {
+    if ( (millis() - tasks[i].elapsedTime) >= tasks[i].period) {
+      tasks[i].state = tasks[i].TickFct(tasks[i].state);
+      tasks[i].elapsedTime = millis(); // Last time this task was ran
+    }
+  }
+}
