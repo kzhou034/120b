@@ -1,0 +1,168 @@
+/*        Your Name & E-mail: Kelley Zhou (kzhou034@ucr.edu)
+
+*          Discussion Section: 23
+
+ *         Assignment: Lab 3  Exercise 2
+
+ *         Exercise Description: rgb light cycles through colors
+
+ *
+
+ *         I acknowledge all content contained herein, excluding template or example code, is my own original work.
+
+ *
+
+ *         Demo Link: https://youtu.be/vFyC2gxttG4
+
+ */
+
+int l1 = 5;
+int l2 = 4;
+int l3 = 3;
+int l4 = 2;
+int rlp = 9;
+int blp = 10;
+int glp = 11;
+int reading = 0;
+
+int interval = 700; //Speed of the LED blinking in ms
+unsigned int val1 = 255;
+int prval = analogRead(A1); //Reads photoresistor val
+int B[4] = {2, 3, 4, 5};
+
+void setup() {
+  pinMode(rlp, OUTPUT);
+  pinMode(glp, OUTPUT);
+  pinMode(blp, OUTPUT);
+  pinMode(l1, OUTPUT);
+  pinMode(l2, OUTPUT);
+  pinMode(l3, OUTPUT);
+  pinMode(l4, OUTPUT);
+  pinMode(5, OUTPUT);
+  pinMode(4, OUTPUT);
+  pinMode(3, OUTPUT);
+  pinMode(2, OUTPUT);
+  Serial.begin(9600);
+}
+
+enum States {INIT, S0, S1, S2} state = INIT;
+
+// This function takes in the state as an argument & returns the current state
+void Tick(int timer) {
+
+    if (timer%interval == 0) {
+      switch (state){
+        case INIT:
+            state = S0;
+            break;
+        // Red 
+        case S0:
+            RGB_LED(val1, 0, 0);
+  
+            if (timer % interval == 0) {
+              state = S1;
+            }
+            else 
+              state = S0;
+            break;
+  
+        // Green 
+        case S1:
+            RGB_LED(0, 0, val1);
+  
+            if (timer % interval == 0) {
+              state = S2;
+            }
+            else 
+              state = S1;
+            break;
+  
+        // Blue
+        case S2:
+            RGB_LED(0, val1, 0);
+  
+            if (timer % interval == 0) {
+              state = S0;
+            }
+            else 
+              state = S2;
+            break;
+        
+      }
+  }
+
+  switch (state) { // State Action
+
+    case INIT:
+      //State Action
+      break;
+
+    case S0:
+      //State Action
+      break;
+
+    case S1:
+      //State Action
+      break;
+
+    case S2:
+      //State Action
+      break;
+
+  }
+}
+
+void RGB_LED(unsigned int red, unsigned int blue, unsigned int green) {
+  analogWrite(rlp, red);
+  analogWrite(blp, blue);
+  analogWrite(glp, green);
+}
+
+void FOUR_LED() {
+  
+  reading = analogRead(A0);
+  reading = map (reading, 0, 1023, 0, 15);
+  //Serial.println(reading);
+  
+  if(reading == 0x01) {
+    digitalWrite(B[0], HIGH);
+    digitalWrite(B[1], LOW);
+    digitalWrite(B[2], LOW);
+    digitalWrite(B[3], LOW);
+  }
+  else if (reading >= 0x02 && reading <= 0x03) {
+    digitalWrite(B[0], HIGH);
+    digitalWrite(B[1], HIGH);
+    digitalWrite(B[2], LOW);
+    digitalWrite(B[3], LOW);
+  }
+  else if (reading <= 0x07 && reading >= 0x04) {
+    digitalWrite(B[0], HIGH);
+    digitalWrite(B[1], HIGH);
+    digitalWrite(B[2], HIGH);
+    digitalWrite(B[3], LOW);
+  }
+  else if (reading >= 0x08) {
+    digitalWrite(B[0], HIGH);
+    digitalWrite(B[1], HIGH);
+    digitalWrite(B[2], HIGH);
+    digitalWrite(B[3], HIGH);
+  }
+  else if (reading == 0) {
+    digitalWrite(B[0], LOW);
+    digitalWrite(B[1], LOW);
+    digitalWrite(B[2], LOW);
+    digitalWrite(B[3], LOW);
+  }
+}
+
+
+void loop() {
+
+  ///Default arduino function
+  int timer = millis();
+
+    Tick(timer);
+    timer++;
+
+}
