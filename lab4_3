@@ -1,0 +1,243 @@
+/*        Your Name & E-mail: Kelley Zhou (kzhou034@ucr.edu)
+
+*          Discussion Section: 23
+
+ *         Assignment: Lab 4  Exercise 3
+
+ *         Exercise Description: lights up leds one by one in a loop goes one direction then goes back 
+
+ *         I acknowledge all content contained herein, excluding template or example code, is my own original work.
+
+ *
+
+ *         Demo Link: https://youtu.be/Uos9y0mXMrs
+
+ */
+
+// The following global variables are used to implement SynchSM
+// functionality using the Arduino API. In contrast the zyBook,
+// the Arduino API does not provide the programmer with direct
+// access to Timer Interrupt functions. 
+const unsigned long period = 100; 
+unsigned long lastRan;
+unsigned int reading;
+unsigned int prval;
+
+const int b_size = 7;
+const int b[b_size] = {2, 3, 4, 5, 9, 10, 11};
+//unsigned int a;
+
+void setup(){
+
+  // Default Arduino Function
+
+    // Initialize LEDs
+    for(int i = 0; i < b_size; i++)
+    {
+        pinMode(b[i], OUTPUT);
+    }
+    Serial.begin(9600);
+    lastRan = 0;
+}
+
+enum States{INIT, OFF, S0, S1, S2, S3} state = INIT;
+
+// The Tick() function is similar in principle to zyBooks
+// If you find it confusing, draw the corresponding SynchSM
+// diagram. 
+void Tick(){
+
+    // State Transitions
+    switch(state){
+      case INIT:
+            state = OFF;
+        break;
+      case OFF:
+        if (prval <= 10) {
+          state = OFF;
+        }
+        else if (prval > 10 && prval <= 33) {
+          state = S0;
+        }
+        else if (prval > 33 && prval <= 66) {
+          state = S1;
+        }
+        else if (prval > 66 && prval <=99) {
+          state = S2;
+        }
+        else {
+          state = S3;
+        }
+      
+        break;
+          
+      case S0:
+        if (prval <= 10) {
+          state = OFF;
+        }
+        else if (prval > 10 && prval <= 33) {
+          state = S0;
+        }
+        else if (prval > 33 && prval <= 66) {
+          state = S1;
+        }
+        else if (prval > 66 && prval <=99) {
+          state = S2;
+        }
+        else {
+          state = S3;
+        }
+            
+        break;
+          
+      case S1:
+        if (prval <= 10) {
+          state = OFF;
+        }
+        else if (prval > 10 && prval <= 33) {
+          state = S0;
+        }
+        else if (prval > 33 && prval <= 66) {
+          state = S1;
+        }
+        else if (prval > 66 && prval <=99) {
+          state = S2;
+        }
+        else {
+          state = S3;
+        }  
+      
+        break;
+          
+      case S2:
+        if (prval <= 10) {
+          state = OFF;
+        }
+        else if (prval > 10 && prval <= 33) {
+          state = S0;
+        }
+        else if (prval > 33 && prval <= 66) {
+          state = S1;
+        }
+        else if (prval > 66 && prval <=99) {
+          state = S2;
+        }
+        else {
+          state = S3;
+        }  
+      
+        break;
+          
+      case S3:
+        if (prval <= 10) {
+          state = OFF;
+        }
+        else if (prval > 10 && prval <= 33) {
+          state = S0;
+        }
+        else if (prval > 33 && prval <= 66) {
+          state = S1;
+        }
+        else if (prval > 66 && prval <=99) {
+          state = S2;
+        }
+        else {
+          state = S3;
+        }
+      
+        break;
+          
+      default: // should never get here
+        break;
+    }
+
+    // State Actions
+    switch(state){ 
+      case INIT:
+        digitalWrite(b[3], LOW);
+        digitalWrite(b[2], LOW);
+        digitalWrite(b[1], LOW);
+        digitalWrite(b[0], LOW);
+        break;
+      case OFF:
+        RGB_LIGHT();
+        digitalWrite(b[3], LOW);
+        digitalWrite(b[2], LOW);
+        digitalWrite(b[1], LOW);
+        digitalWrite(b[0], LOW);
+        break;
+      case S0:
+        RGB_LIGHT();
+        digitalWrite(b[3], HIGH);
+        digitalWrite(b[2], LOW);
+        digitalWrite(b[1], LOW);
+        digitalWrite(b[0], LOW);
+        break;
+      case S1:
+        RGB_LIGHT();
+        digitalWrite(b[3], HIGH);
+        digitalWrite(b[2], HIGH);
+        digitalWrite(b[1], LOW);
+        digitalWrite(b[0], LOW);
+        break;
+      case S2:
+        RGB_LIGHT();
+        digitalWrite(b[3], HIGH);
+        digitalWrite(b[2], HIGH);
+        digitalWrite(b[1], HIGH);
+        digitalWrite(b[0], LOW);
+        break;
+      case S3:
+        RGB_LIGHT();
+        digitalWrite(b[3], HIGH);
+        digitalWrite(b[2], HIGH);
+        digitalWrite(b[1], HIGH);
+        digitalWrite(b[0], HIGH);
+        break;
+     default: // should never get here
+        break;
+    }
+}
+
+void RGB_LIGHT() {
+  if(reading == 0) {
+      analogWrite(b[4],0);
+      analogWrite(b[5],0);
+      analogWrite(b[6],0);
+    }
+    else if (reading > 0 && reading <= 341) {
+      analogWrite(b[4],255);
+      analogWrite(b[5],0);
+      analogWrite(b[6],0);
+    }
+    else if (reading <= 682) {
+      analogWrite(b[4],255);
+      analogWrite(b[5],0);
+      analogWrite(b[6],255);
+    }
+    else {
+      analogWrite(b[4],255);
+      analogWrite(b[5],255);
+      analogWrite(b[6],255);
+    }
+}
+
+void loop(){ 
+
+   // Default Arduino function
+  
+  // We track time explicitly in the loop() function,
+  // which is different that the Timer Interrupt
+  // mechanism introduced in the zyBook
+  
+  reading = analogRead(A0);
+  reading = map(reading,0,1023,0,1023);
+  prval = analogRead(A1);
+  
+  if ((millis() - lastRan) > period) {
+    Tick(); 
+    lastRan = millis();
+    
+  }  
+  //Serial.println(prval);
+}
