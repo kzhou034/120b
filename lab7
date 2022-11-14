@@ -1,0 +1,696 @@
+/* 
+
+ *         Assignment: Lab 7
+
+ *         Exercise Description: basically an ac/heater unit
+
+ *         I acknowledge all content contained herein, excluding template or example code, is my own original work.
+
+ *
+
+ *         Demo Link: 
+
+ */
+
+#include <LiquidCrystal.h>
+#include <DHT.h>
+#define DHTPIN A0     
+#define DHTTYPE DHT11 
+DHT dht(DHTPIN, DHTTYPE);
+// initialize the library by associating any needed LCD interface pin
+// with the arduino pin number it is connected to
+const int rs = 7, en = 6, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
+//default settings
+bool sysOn=false;
+bool tempChange = true;
+bool humChange = false;
+
+//joystick config
+int JS_X = A1;
+int JS_Y = A2;
+int JS_BTN = 12;
+
+//dht temperature humidity readings
+int h = dht.readHumidity();
+int t = dht.readTemperature();
+int f = dht.readTemperature(true);
+int sf = 75; //user-set temp in F (default)
+int sh = 30; //user-set humidity (default)
+float hif = dht.computeHeatIndex(f, h);
+float hic = dht.computeHeatIndex(t, h, false);
+
+//led lights
+bool humidifierOn=false;
+bool dehumudifierOn=false;
+bool coolerOn=false;
+bool heaterOn=false;
+
+//humidifier - blue
+int high_b=0;
+int low_b=0;
+
+//dehumidifier - yellow
+int high_y=0;
+int low_y=0;
+
+//cooler - white
+int high_w=0;
+int low_w=0;
+
+//heater - red
+int high_r=0;
+int low_r=0;
+
+typedef struct task {
+  int state;
+  unsigned long period;
+  unsigned long elapsedTime;
+  int (*TickFct)(int);
+
+} task;
+
+int delay_gcd;
+const unsigned short tasksNum = 6;
+task tasks[tasksNum];
+
+//JOYSTICK DIRECTIONS AND LCD DISPLAY
+enum joystickControl{init_j, off_j, btnpress_j, on_j, leftright };
+int joystickControl_Tick(int state_j) {
+    switch(state_j) {//state transitions
+        case init_j:
+            tempChange = true;
+            humChange = false;
+            state_j = off_j;
+            break;
+        case off_j: 
+            Serial.println("off");
+            if (digitalRead(JS_BTN) == 0) {//if button pressed when sys is off
+                if (sysOn == false) {
+                    sysOn = true;
+                    state_j = btnpress_j;
+                }
+            }
+            else {
+                state_j = off_j; //recent addition 130am
+            }
+            break;
+        case btnpress_j:
+            if (digitalRead(JS_BTN) == 0) {
+                if(sysOn == false) {
+                    sysOn = true;
+                }
+                else {
+                    sysOn = false;
+                }
+                state_j = btnpress_j;
+            }
+            else {
+                if (sysOn == false) {
+                    state_j = off_j;
+                }
+                else {
+                    state_j = on_j;
+                }
+            }
+            break;
+        case on_j:
+            Serial.println("on");
+            Serial.println(digitalRead(JS_BTN));
+            if (digitalRead(JS_BTN) == 0) {//if button pressed when sys is on
+                if (sysOn == true) {
+                    sysOn = false;
+                    state_j = off_j;
+                }
+            }
+            else {
+                if (analogRead(JS_X) > 900) {//up->change desired temp
+                    tempChange = true;
+                    humChange = false;
+                    state_j = on_j;
+                }
+                else if (analogRead(JS_X) < 200) {//down->change desired humidity
+                    tempChange = false;
+                    humChange = true;
+                    state_j = on_j;
+                }
+                else {
+                    state_j = on_j; //recent addition 130am
+                }
+            }
+            break;
+
+    }//state transition
+
+    //state actions
+    switch(state_j) {
+        case init_j:
+            lcd.noDisplay();
+            break;
+        case off_j:
+            lcd.noDisplay();
+            break;
+        case btnpress_j:
+            break;
+        case on_j:
+            lcd.display();
+            
+            //default set temp and set hum 
+            //stemp = 75
+            //shum = 30
+            
+            if (f == sf) { //if temp and set temp are the same
+                coolerOn=false;
+                heaterOn=false;
+            }
+            else if (sf > f) { //if set temp is greater than curr temp
+                heaterOn=true;
+                coolerOn=false;
+            }
+            else if (sf < f) { //if set temp is less than curr temp
+                heaterOn=false;
+                coolerOn=true;
+            }
+            
+            if (sh == h) { //if set hum and curr hum are the same, turn off
+                humidifierOn=false;
+                dehumudifierOn=false;
+            }
+            else if (sh > h) { //if set hum is greater than curr hum
+                humidifierOn=true;
+                dehumudifierOn=false;
+            }
+            else if (sh < h) {
+                humidifierOn=false;
+                dehumudifierOn=true;
+            }
+
+            if (tempChange == true && humChange == false) {//changing temperature
+                if (analogRead(JS_Y) > 800) { //temperature, js right
+                    sf++; //increase set temp
+                    lcd.setCursor(0, 0);
+                    lcd.print("Temp:");
+                    lcd.print(f);
+                    lcd.print(" STemp:");
+                    lcd.print(sf);
+
+                    lcd.setCursor(0, 1); //second line -- line 1
+
+                    lcd.print("Hum:");
+                    lcd.print(h);
+                    lcd.print(" SHum:");
+                    lcd.print(sh);
+
+                } 
+                else if (analogRead(JS_Y) < 350) { //temperature, js left
+                    sf--; //decrease set temp
+                    lcd.setCursor(0, 0);
+                    lcd.print("Temp:");
+                    lcd.print(f);
+                    lcd.print(" STemp:");
+                    lcd.print(sf);
+
+                    lcd.setCursor(0, 1); //second line -- line 1
+
+                    lcd.print("Hum:");
+                    lcd.print(h);
+                    lcd.print(" SHum:");
+                    lcd.print(sh);
+                }
+
+                if (f == sf) { //if temp and set temp are the same
+                    coolerOn=false;
+                    heaterOn=false;
+                }
+                else if (sf > f) { //if set temp is greater than curr temp
+                    heaterOn=true;
+                    coolerOn=false;
+                }
+                else if (sf < f) { //if set temp is less than curr temp
+                    heaterOn=false;
+                    coolerOn=true;
+                }
+            }//changing temp
+            else if (tempChange == false && humChange == true) { //changing humidity
+                if (analogRead(JS_Y) > 800) { //humidity, js right
+                    sh++; //increase set humidity
+                    lcd.setCursor(0, 0);
+                    lcd.print("Temp:");
+                    lcd.print(f);
+                    lcd.print(" STemp:");
+                    lcd.print(sf);
+
+                    lcd.setCursor(0, 1); //second line -- line 1
+
+                    lcd.print("Hum:");
+                    lcd.print(h);
+                    lcd.print(" SHum:");
+                    lcd.print(sh);
+                } 
+                else if (analogRead(JS_Y) < 350) {//humidity, js left
+                    sh--; //decrease set humidity
+                    lcd.setCursor(0, 0);
+                    lcd.print("Temp:");
+                    lcd.print(f);
+                    lcd.print(" STemp:");
+                    lcd.print(sf);
+
+                    lcd.setCursor(0, 1); //second line -- line 1
+
+                    lcd.print("Hum:");
+                    lcd.print(h);
+                    lcd.print(" SHum:");
+                    lcd.print(sh);
+                }
+
+                if (sh == h) { //if set hum and curr hum are the same, turn off
+                    humidifierOn=false;
+                    dehumudifierOn=false;
+                }
+                else if (sh > h) { //if set hum is greater than curr hum
+                    humidifierOn=true;
+                    dehumudifierOn=false;
+                }
+                else if (sh < h) {
+                    humidifierOn=false;
+                    dehumudifierOn=true;
+                }
+            }//changing humidity
+            break;
+    }//state actions
+    return state_j;
+}
+
+
+//SAMPLE DHT
+enum DHTSample {sample};
+int DHT_Tick(int dhtstate) {
+    switch (dhtstate) {
+        case sample:
+            dhtstate = sample;
+            break;
+    }
+
+    switch(dhtstate) {
+        case sample:
+            h = dht.readHumidity();
+            t = dht.readTemperature();
+            f = dht.readTemperature(true);
+            break;
+    }
+
+    return dhtstate;
+}
+
+
+//HUMIDIFIER - blue, pin 8
+enum humidifier{init_h, pwmh_h, pwml_h};
+int Humidifier_Tick(int humidifierstate) {
+    //pwm period = 200ms
+    //duty cycle = 20%
+    //20% -> 1/5 -> 200/5 is 40 
+    //200/5 = 40
+    //period = 40
+    high_b = 1; //20% of 200 high
+    low_b = 4; //80% of 200 low
+
+    static int j = 0;
+
+    switch(humidifierstate) {//state transition
+        case init_h:
+            j=0;
+            if (sysOn==true) {
+                humidifierstate = pwmh_h;
+            }
+            else {
+                humidifierstate = init_h;
+            }
+            break;
+        case pwmh_h://pwm high
+            if(sysOn==true && humidifierOn==true) {//system on
+                if (j < high_b) {
+                    humidifierstate = pwmh_h;
+                    j++;
+                }
+                else {
+                    j=0;
+                    humidifierstate = pwml_h;
+                }
+            }
+            else {//system off -> go back to init (light should turn off)
+                humidifierstate = init_h;
+            }
+            break;
+        case pwml_h://pwm low
+            if(sysOn==true && humidifierOn==true) {//system on
+                if (j < low_b) {
+                    humidifierstate = pwml_h;
+                    j++;
+                }
+                else {
+                    j=0;
+                    humidifierstate = pwmh_h;
+                }
+            }
+            else {//system off -> go back to init (light should turn off)
+                humidifierstate = init_h;
+            }
+            break;
+    }//state transition
+
+    switch(humidifierstate) {//state action
+        case init_h:
+            digitalWrite(8,LOW);
+            break;
+        case pwmh_h:
+            if (humidifierOn==true) {
+                digitalWrite(8,HIGH);
+            }
+            else {
+                digitalWrite(8,LOW);
+            }
+            break;
+        case pwml_h:
+            digitalWrite(8,LOW);
+            break;
+    }//state action
+
+    return humidifierstate;
+}
+
+
+//DEHUMIDIFIER - yellow, pin 9
+enum dehumidifier{init_d, pwmh_d, pwml_d};
+int DeHumidifier_Tick(int dehumidifierstate) {
+    //pwm period = 400ms
+    //duty cycle = 25%
+    //25% -> 1/4 -> 400/4 is 100
+    //400/4 = 100
+    //period = 100
+    high_y = 1; //25% of 400 high
+    low_y = 3;  //75% of 400 low
+
+    static int k=0;
+
+    switch(dehumidifierstate) {//state transition
+        case init_d:
+            k=0;
+            if (sysOn==true && dehumudifierOn==true) {
+                dehumidifierstate = pwmh_d;
+            }
+            else {
+                dehumidifierstate = init_d;
+            }
+            break;
+        case pwmh_d://pwm high
+            if (sysOn==true && dehumudifierOn==true) {//system on
+                if (k < high_y) {
+                    k++;
+                    dehumidifierstate = pwmh_d;
+                }
+                else {
+                    k=0;
+                    dehumidifierstate = pwml_d;
+                }
+            }
+            else {//system off -> go back to init (light should turn off)
+                dehumidifierstate = init_d;
+            }
+            break;
+        case pwml_d:
+            if (sysOn==true && dehumudifierOn==true) {//system on
+                if (k < low_y) {
+                    k++;
+                    dehumidifierstate = pwml_d;
+                }
+                else {
+                    k=0;
+                    dehumidifierstate = pwmh_d;
+                }
+            }
+            else {//system off -> go back to init (light should turn off)
+                dehumidifierstate = init_d;
+            }
+            break;
+    }//state transition
+
+    switch(dehumidifierstate) {//state action
+        case init_d:
+            digitalWrite(9,LOW);
+            break;
+        case pwmh_d:
+            if (dehumudifierOn==true) {
+                digitalWrite(9,HIGH);
+            }
+            else {
+                digitalWrite(9,LOW);
+            }
+            break;
+        case pwml_d:
+            digitalWrite(9,LOW);
+            break;
+    }//state action
+
+    return dehumidifierstate;
+}
+
+
+//COOLER - white, pin 10
+enum cooler{init_c, pwmh_c, pwml_c};
+int Cooler_Tick(int coolerstate) {
+    //pwm period = 300ms
+    //duty cycle = 60%
+    //60% -> 3/5 -> 300/5 is 60
+    //300/5 = 60
+    //period = 60
+
+    high_w = 3; //60% of 300 high
+    low_w = 2; //40% of 300 low
+
+    static int l = 0;
+
+    switch(coolerstate) {//state transition
+        case init_c:
+            l=0;
+            if (sysOn==true) {
+                coolerstate = pwmh_c;
+            }
+            else {
+                coolerstate = init_c;
+            }
+            break;
+        case pwmh_c://pwm high
+            if(sysOn==true && coolerOn==true) {//system on
+                if (l < high_w) {
+                    l++;
+                    coolerstate = pwmh_c;
+                }
+                else {
+                    l=0;
+                    coolerstate = pwml_c;
+                }
+            }
+            else {//system off -> go back to init (light turn off)
+                coolerstate = init_c;
+            }
+            break;
+        case pwml_c://pwm low
+            if(sysOn==true && coolerOn==true) {//system on
+                if (l < low_w) {
+                    l++;
+                    coolerstate = pwml_c;
+                }
+                else {
+                    l=0;
+                    coolerstate = pwmh_c;
+                }
+            }
+            else {//system off -> go back to init (light turn off)
+                coolerstate = init_c;
+            }
+            break;
+    }//state transition
+
+    switch(coolerstate) {//state action
+        case init_c:
+            digitalWrite(10,LOW);
+            break;
+        case pwmh_c:
+            if (coolerOn==true) {
+                digitalWrite(10,HIGH);
+            }
+            else {
+                digitalWrite(10,LOW);
+            }
+            break;
+        case pwml_c:
+            digitalWrite(10,LOW);
+            break;
+    }//state action
+
+    return coolerstate;
+}
+
+
+//HEATER - red, pin 11
+enum heater{init_he, pwmh_he, pwml_he};
+int Heater_Tick(int heaterstate) {
+    //pwm period 100ms
+    //duty cycle = 95%
+    //95% -> 19/20 -> 100/20 is 5
+    //100/20 = 5
+    //period = 5
+
+    high_r = 19; //95% of 100 high
+    low_r = 1;  //5% of 100 low
+
+    static int m=0;
+
+    switch(heaterstate) {//state transition
+        case init_he:
+            m=0;
+            if(sysOn==true) {
+                heaterstate = pwmh_he;
+            }
+            else {
+                heaterstate = init_he;
+            }
+            break;
+        case pwmh_he://pwm high
+            if (sysOn==true && heaterOn==true) {//system on
+                if (m < high_r) {
+                    m++;
+                    heaterstate = pwmh_he;
+                }
+                else  {
+                    m=0;
+                    heaterstate = pwml_he;
+                }
+            }
+            else {//system off -> go back to init (light turn off)
+                heaterstate = init_he;
+            }
+            break;
+        case pwml_he://pwm low
+            if(sysOn==true && heaterOn==true) {//system on
+                if (m < low_r) {
+                    m++;
+                    heaterstate = pwml_he;
+                }
+                else {
+                    m=0;
+                    heaterstate = pwmh_he;
+                }
+            }
+            else {//system off -> go back to init (light turn off)
+                heaterstate = init_he;
+            }
+            break;
+    }//state transition
+
+    switch(heaterstate) {//state action
+        case init_he:
+            digitalWrite(11,LOW);
+            break;
+        case pwmh_he:
+            if(heaterOn==true) {
+                digitalWrite(11,HIGH);
+            }
+            else {
+                digitalWrite(11,LOW);
+            }
+            break;
+        case pwml_he:
+            digitalWrite(11,LOW);
+            break;
+    }//state action
+
+    return heaterstate;
+}
+void setup() {
+  // set up the LCD's number of columns and rows:
+    pinMode(8, OUTPUT);
+    pinMode(9, OUTPUT);
+    pinMode(10, OUTPUT);
+    pinMode(11, OUTPUT);
+    lcd.begin(16, 2);
+
+    pinMode(JS_BTN, INPUT_PULLUP);
+
+    unsigned char i = 0;
+    tasks[i].state = init_j; //joystick task 1
+    tasks[i].period = 300;
+    tasks[i].elapsedTime = 0;
+    tasks[i].TickFct = &joystickControl_Tick;
+    i++;
+    tasks[i].state = sample; //dht sample task 2
+    tasks[i].period = 500;
+    tasks[i].elapsedTime = 0;
+    tasks[i].TickFct = &DHT_Tick;
+    i++;
+    tasks[i].state = init_h; //humidifier task 3
+    tasks[i].period = 40;
+    tasks[i].elapsedTime = 0;
+    tasks[i].TickFct = &Humidifier_Tick;
+    i++;
+    tasks[i].state = init_d; //dehumidifier task 4
+    tasks[i].period = 100;
+    tasks[i].elapsedTime = 0;
+    tasks[i].TickFct = &DeHumidifier_Tick;
+    i++;
+    tasks[i].state = init_c; //cooler task 5
+    tasks[i].period = 60;
+    tasks[i].elapsedTime = 0;
+    tasks[i].TickFct = &Cooler_Tick;
+    i++;
+    tasks[i].state = init_he; //heater task 6
+    tasks[i].period = 5;
+    tasks[i].elapsedTime = 0;
+    tasks[i].TickFct = &Heater_Tick;
+
+    delay_gcd = 1000; // GCD
+
+    Serial.begin(9600);
+    dht.begin();
+}
+
+void loop() {
+  // set the cursor to column 0, line 0
+  // (note: line 1 is the second row, since counting begins with 0):
+  
+    lcd.setCursor(0, 0);
+
+    h = dht.readHumidity();
+    t = dht.readTemperature();
+    f = dht.readTemperature(true);
+
+    if (isnan(h) || isnan(t) || isnan(f)) {
+        Serial.println("Failed to read from DHT sensor!");
+        return;
+    }
+
+    float hif = dht.computeHeatIndex(f, h);
+    float hic = dht.computeHeatIndex(t, h, false);
+
+    lcd.print("Temp:");
+    lcd.print(f);
+    lcd.print(" STemp:");
+    lcd.print(sf);
+
+    lcd.setCursor(0, 1); //second line -- line 1
+
+    lcd.print("Hum:");
+    lcd.print(h);
+    lcd.print(" SHum:");
+    lcd.print(sh);
+
+    unsigned char i;
+  for (i = 0; i < tasksNum; ++i) {
+    if ( (millis() - tasks[i].elapsedTime) >= tasks[i].period) {
+      tasks[i].state = tasks[i].TickFct(tasks[i].state);
+      tasks[i].elapsedTime = millis(); // Last time this task was ran
+    }
+  }
+
+}
